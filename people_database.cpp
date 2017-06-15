@@ -29,6 +29,15 @@ public:
 		for(auto& pair:mDb)
 			delete pair.second;
 	}
+	database& operator=(const database& db)
+	{
+		if(&db!=this) {
+			mDb=db.mDb;
+			for(auto& pair:mDb)
+				pair.second=pair.second->copy();
+		}
+		return *this;
+	}
 	template<typename T,typename...ArgsT>
 	void add_profile(std::size_t id,ArgsT&&...args)
 	{
@@ -87,11 +96,11 @@ public:
 #include <iostream>
 #define log std::cerr<<__func__<<std::endl
 template<typename T>
-class tracer final:public T
-{
-	public:
+class tracer final:public T {
+public:
 	template<typename...ArgsT>
-	explicit tracer(ArgsT&&...args):T(std::forward<ArgsT>(args)...){
+	explicit tracer(ArgsT&&...args):T(std::forward<ArgsT>(args)...)
+	{
 		log;
 	}
 	virtual ~tracer()
