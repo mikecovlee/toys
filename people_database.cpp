@@ -75,4 +75,35 @@ public:
 	{
 		return new people(*this);
 	}
+	virtual gender get_gender() const
+	{
+		return this->mGender;
+	}
+	virtual const std::string& get_name() const
+	{
+		return this->mName;
+	}
 };
+#include <iostream>
+#define log std::cerr<<__func__<<std::endl
+template<typename T>
+class tracer final:public T
+{
+	public:
+	template<typename...ArgsT>
+	explicit tracer(ArgsT&&...args):T(std::forward<ArgsT>(args)...){
+		log;
+	}
+	virtual ~tracer()
+	{
+		log;
+	}
+};
+int main()
+{
+	using type=tracer<people>;
+	database db;
+	db.add_profile<type>(222,gender::male,"Mike Lee");
+	std::cout<<db.get_profile<type>(222).get_name()<<std::endl;
+	return 0;
+}
