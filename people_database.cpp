@@ -64,7 +64,7 @@ enum class gender {
 };
 class people:public people_base {
 protected:
-	gender mGender=other;
+	gender mGender=gender::other;
 	std::string mName;
 public:
 	people()=delete;
