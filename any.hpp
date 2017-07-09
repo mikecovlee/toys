@@ -76,13 +76,22 @@ namespace cov {
 	};
 }
 namespace std {
-	class bad_any_cast final:public std::bad_cast {
+	class bad_any_cast final:public bad_cast {
 	public:
-		using bad_cast::bad_cast;
+		virtual const char* what() const noexcept
+		{
+			return "bad any_cast";
+		}
 	};
 	constexpr std::size_t any_allocator_blck_size=96;
 	class any final {
 	private:
+		template<typename T,typename...ArgsT>friend any make_any(ArgsT&&...);
+		template<typename T>friend const T& any_cast(const any&);
+		template<typename T>friend T& any_cast(any&&);
+		template<typename T>friend T& any_cast(any&);
+		template<typename T>friend T* const any_cast(const any*);
+		template<typename T>friend T* any_cast(any*);
 		class value_base {
 		public:
 			value_base()=default;
@@ -95,6 +104,13 @@ namespace std {
 		};
 		template<typename T>
 		class value:public value_base {
+			template<typename X,typename...ArgsT>friend any make_any(ArgsT&&...);
+			template<typename X>friend const X& any_cast(const any&);
+			template<typename X>friend X& any_cast(any&&);
+			template<typename X>friend X& any_cast(any&);
+			template<typename X>friend X* const any_cast(const any*);
+			template<typename X>friend X* any_cast(any*);
+			friend class any;
 			static cov::allocator<value,any_allocator_blck_size> allocator;
 			T data;
 		public:
@@ -116,23 +132,14 @@ namespace std {
 			}
 		};
 		value_base* data=nullptr;
-		any(value_base* ptr):data(ptr) {}
 	public:
-		void swap(any& v)
-		{
-			std::swap(data,v.data);
-		}
-		void swap(any&& v)
-		{
-			std::swap(data,v.data);
-		}
-		any()=default;
+		constexpr any()=default;
 		any(const any& v):data(v.data==nullptr?nullptr:v.data->copy()) {}
 		any(any&& v) noexcept
 		{
 			std::swap(data,v.data);
 		}
-		template<typename T>explicit any(const T& val):data(value<T>::allocator.alloc(val)) {}
+		template<typename T> any(T&& val):data(value<T>::allocator.alloc(std::forward<T>(val))) {}
 		~any()
 		{
 			if(data!=nullptr)
@@ -147,11 +154,16 @@ namespace std {
 			}
 			return *this;
 		}
-		template<typename T>any& operator=(const T& val)
+		any& operator=(any&& v)
+		{
+			std::swap(data,v.data);
+			return *this;
+		}
+		template<typename T>any& operator=(T&& val)
 		{
 			if(data!=nullptr)
 				data->kill();
-			data=value<T>::allocator.alloc(val);
+			data=value<T>::allocator.alloc(std::forward<T>(val));
 			return *this;
 		}
 		template<typename T,typename...ArgsT>
@@ -166,6 +178,10 @@ namespace std {
 			if(data!=nullptr)
 				data->kill();
 		}
+		void swap(any& v)
+		{
+			std::swap(data,v.data);
+		}
 		bool has_value() const
 		{
 			return data!=nullptr;
@@ -174,20 +190,51 @@ namespace std {
 		{
 			return data==nullptr?typeid(void):data->type();
 		}
-		template<typename T,typename...ArgsT>
-		static any make(ArgsT&&...args)
-		{
-			return value<T>::allocator.alloc(std::forward<ArgsT>(args)...);
-		}
-		template<typename T>T& cast() const
-		{
-			if(typeid(T)!=this->type())
-				throw bad_any_cast();
-			return dynamic_cast<value<T>*>(data)->data;
-		}
 	};
+	template<typename T> extern cov::allocator<any::value<T>,any_allocator_blck_size> any::value<T>::allocator;
 	void swap(any& a,any& b)
 	{
 		a.swap(b);
+	}
+	template<typename T,typename...ArgsT>
+	any make_any(ArgsT&&...args)
+	{
+		any tmp;
+		tmp.data=any::value<T>::allocator.alloc(std::forward<ArgsT>(args)...);;
+		return std::move(tmp);
+	}
+	template<typename T>const T& any_cast(const any& v)
+	{
+		if(typeid(T)!=v.type())
+			throw bad_any_cast();
+		return dynamic_cast<any::value<T>*>(v.data)->data;
+	}
+	template<typename T>T& any_cast(any&& v)
+	{
+		if(typeid(T)!=v.type())
+			throw bad_any_cast();
+		return dynamic_cast<any::value<T>*>(v.data)->data;
+	}
+	template<typename T>T& any_cast(any& v)
+	{
+		if(typeid(T)!=v.type())
+			throw bad_any_cast();
+		return dynamic_cast<any::value<T>*>(v.data)->data;
+	}
+	template<typename T>T* any_cast(any* v)
+	{
+		if(v==nullptr)
+			return nullptr;
+		if(typeid(T)!=v->type())
+			throw bad_any_cast();
+		return &dynamic_cast<any::value<T>*>(v->data)->data;
+	}
+	template<typename T>T* const any_cast(const any* v)
+	{
+		if(v==nullptr)
+			return nullptr;
+		if(typeid(T)!=v->type())
+			throw bad_any_cast();
+		return &dynamic_cast<any::value<T>*>(v->data)->data;
 	}
 }
