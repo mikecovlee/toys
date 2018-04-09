@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include "./linear_list.hpp"
+#include "./linear_container.hpp"
 #include <mozart/timer.hpp>
 #include <mozart/random.hpp>
 
@@ -14,27 +14,27 @@ int main()
 	long test_length = 10000000;
 	long test_range = 10000;
 	std::vector<int> std_vec;
-	cov::linear_list<int, std::size_t, 100000> cov_vec;
+	cov::array_list<int, std::size_t, 100000> cov_al;
 	unsigned long ts = 0, sum = 0;
 	ts = time();
 	for (long i = 0; i < test_length; ++i) {
-		cov_vec.push_back(cov::rand(long(1), test_range));
+		cov_al.push_back(cov::rand(long(1), test_range));
 	}
 	std::cout << "COV Push:" << time() - ts << std::endl;
-	std::cout << cov_vec.capacity() << std::endl;
+	std::cout << cov_al.capacity() << std::endl;
 	ts = time();
 	sum = 0;
 	for (long i = 0; i < test_length; ++i) {
-		sum += cov_vec[i];
+		sum += cov_al[i];
 	}
 	std::cout << "COV Sum:" << time() - ts << std::endl;
 	std::cout << sum << std::endl;
 	ts = time();
 	for (long i = 0; i < test_length; ++i) {
-		cov_vec.pop_back();
+		cov_al.pop_back();
 	}
 	std::cout << "COV Pop:" << time() - ts << std::endl;
-	std::cout << cov_vec.capacity() << std::endl;
+	std::cout << cov_al.capacity() << std::endl;
 	ts = time();
 	for (long i = 0; i < test_length; ++i) {
 		std_vec.push_back(cov::rand(long(1), test_range));
