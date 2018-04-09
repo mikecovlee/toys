@@ -1,5 +1,5 @@
 #pragma once
-// std::vector by Michael Lee
+// Linear List by Michael Lee
 #include <stdexcept>
 #include <memory>
 
@@ -26,44 +26,52 @@ namespace cov {
 		}
 	}
 
-	template<typename data_t, typename size_t=std::size_t, template<typename> class allocator_t=std::allocator>
-	class vector final {
+	template<typename data_t, typename size_t=std::size_t, size_t chunk_size = 32, template<typename> class allocator_t=std::allocator>
+	class linear_list final {
 		static allocator_t<data_t> m_allocator;
 		size_t m_capacity = 0, m_size = 0;
 		data_t *m_data = nullptr;
 
-	public:
-		constexpr vector() = default;
+		size_t compute_capacity(size_t cap)
+		{
+			if (cap % chunk_size == 0)
+				return cap;
+			else
+				return ((cap - cap % chunk_size) / chunk_size + 1) * chunk_size;
+		}
 
-		vector(const vector &vec) : m_capacity(vec.m_capacity), m_size(vec.m_size),
+	public:
+		constexpr linear_list() = default;
+
+		linear_list(const linear_list &vec) : m_capacity(vec.m_capacity), m_size(vec.m_size),
 			m_data(m_allocator.allocate(vec.m_capacity))
 		{
 			normal_copy_n(vec.m_data, m_data, m_size);
 		}
 
-		vector(vector &&vec) noexcept
+		linear_list(linear_list &&vec) noexcept
 		{
 			swap(vec);
 		}
 
-		~vector()
+		~linear_list()
 		{
 			clear();
 		}
 
-		vector &operator=(const vector &vec)
+		linear_list &operator=(const linear_list &vec)
 		{
 			assign(vec);
 			return *this;
 		}
 
-		vector &operator=(vector &&vec) noexcept
+		linear_list &operator=(linear_list &&vec) noexcept
 		{
 			swap(vec);
 			return *this;
 		}
 
-		void assign(const vector &vec)
+		void assign(const linear_list &vec)
 		{
 			if (&vec != this) {
 				clear();
@@ -77,7 +85,7 @@ namespace cov {
 		data_t &at(size_t idx)
 		{
 			if (idx >= m_size)
-				throw std::out_of_range("Vector");
+				throw std::out_of_range("linear_list");
 			else
 				return m_data[idx];
 		}
@@ -85,7 +93,7 @@ namespace cov {
 		const data_t &at(size_t idx) const
 		{
 			if (idx >= m_size)
-				throw std::out_of_range("Vector");
+				throw std::out_of_range("linear_list");
 			else
 				return m_data[idx];
 		}
@@ -137,8 +145,8 @@ namespace cov {
 
 		void reserve(size_t new_cap)
 		{
-			if (m_capacity - m_size < new_cap) {
-				size_t cap = m_size + new_cap;
+			if (m_capacity - m_size < chunk_size) {
+				size_t cap = m_capacity + compute_capacity(new_cap);
 				data_t *dat = m_allocator.allocate(cap);
 				uninitialized_copy_n(m_data, dat, m_size);
 				if (m_data != nullptr)
@@ -155,8 +163,8 @@ namespace cov {
 
 		void shrink_to_fit()
 		{
-			if (m_capacity > m_size) {
-				size_t cap = m_size;
+			if (m_capacity - m_size > chunk_size) {
+				size_t cap = compute_capacity(m_size);
 				data_t *dat = m_allocator.allocate(cap);
 				uninitialized_copy_n(m_data, dat, m_size);
 				if (m_data != nullptr)
@@ -181,19 +189,19 @@ namespace cov {
 		void emplace_back(args_t &&...args)
 		{
 			if (m_size == m_capacity)
-				reserve(m_capacity>0?m_capacity:1);
+				reserve(chunk_size);
 			::new(m_data + (m_size++)) data_t(std::forward<args_t>(args)...);
 		}
 
 		void push_back(const data_t &dat)
 		{
-			emplace_back(std::move(dat));
+			emplace_back(dat);
 		}
 
 		void pop_back()
 		{
 			if (m_size == 0)
-				throw std::logic_error("Pop back from empty vector.");
+				throw std::logic_error("Pop back from empty linear_list.");
 			else
 				(m_data + (m_size--))->~data_t();
 		}
@@ -218,14 +226,14 @@ namespace cov {
 			resize(count, data_t());
 		}
 
-		void swap(vector &vec)
+		void swap(linear_list &vec)
 		{
 			std::swap(vec.m_capacity, m_capacity);
 			std::swap(vec.m_size, m_size);
 			std::swap(vec.m_data, m_data);
 		}
 
-		void swap(vector &&vec) noexcept
+		void swap(linear_list &&vec) noexcept
 		{
 			std::swap(vec.m_capacity, m_capacity);
 			std::swap(vec.m_size, m_size);
@@ -233,5 +241,5 @@ namespace cov {
 		}
 	};
 
-	template<typename data_t, typename size_t, template<typename> class allocator_t> allocator_t<data_t> vector<data_t, size_t, allocator_t>::m_allocator;
+	template<typename data_t, typename size_t, size_t chunk_size, template<typename> class allocator_t> allocator_t<data_t> linear_list<data_t, size_t, chunk_size, allocator_t>::m_allocator;
 }

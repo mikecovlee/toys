@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include "./vector.hpp"
+#include "./linear_list.hpp"
 #include <mozart/timer.hpp>
 #include <mozart/random.hpp>
 
@@ -14,7 +14,7 @@ int main()
 	long test_length = 10000000;
 	long test_range = 10000;
 	std::vector<int> std_vec;
-	cov::vector<int> cov_vec;
+	cov::linear_list<int, std::size_t, 100000> cov_vec;
 	unsigned long ts = 0, sum = 0;
 	ts = time();
 	for (long i = 0; i < test_length; ++i) {
