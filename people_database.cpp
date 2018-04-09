@@ -1,9 +1,4 @@
 #include <unordered_map>
-#include <type_traits>
-#include <stdexcept>
-#include <typeinfo>
-#include <string>
-#include <utility>
 
 class people_base {
 public:

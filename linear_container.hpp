@@ -32,7 +32,9 @@ namespace cov {
 		static allocator_t<data_t> m_allocator;
 		size_t m_capacity = 0, m_size = 0;
 		data_t *m_data = nullptr;
+
 		virtual void extend()=0;
+
 	public:
 		constexpr linear_container() = default;
 
@@ -213,8 +215,8 @@ namespace cov {
 	};
 
 	template<typename data_t, typename size_t=std::size_t, size_t chunk_size = 32, template<typename> class allocator_t=std::allocator>
-	class array_list final:public linear_container<data_t,size_t,allocator_t> {
-		using parent_t=linear_container<data_t,size_t,allocator_t>;
+	class array_list final : public linear_container<data_t, size_t, allocator_t> {
+		using parent_t=linear_container<data_t, size_t, allocator_t>;
 
 		size_t compute_capacity(size_t cap)
 		{
@@ -260,12 +262,14 @@ namespace cov {
 	};
 
 	template<typename data_t, typename size_t=std::size_t, template<typename> class allocator_t=std::allocator>
-	class vector final:public linear_container<data_t,size_t,allocator_t> {
-		using parent_t=linear_container<data_t,size_t,allocator_t>;
+	class vector final : public linear_container<data_t, size_t, allocator_t> {
+		using parent_t=linear_container<data_t, size_t, allocator_t>;
+
 		virtual void extend() override
 		{
-			this->reserve(this->m_capacity>0?this->m_capacity:1);
+			this->reserve(this->m_capacity > 0 ? this->m_capacity : 1);
 		}
+
 	public:
 		using parent_t::parent_t;
 

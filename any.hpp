@@ -9,7 +9,7 @@
 namespace cov {
 	template<typename T, long blck_size>
 	class allocator final {
-		std::allocator <T> mAlloc;
+		std::allocator<T> mAlloc;
 		std::array<T *, blck_size> mPool;
 		long mOffset = -1;
 		bool mActived = true;

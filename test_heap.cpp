@@ -7,7 +7,7 @@
 cov::heap<10240, cov::allocate_policy::best_fit, true> cov_alloc_best;
 cov::heap<10240, cov::allocate_policy::first_fit, true> cov_alloc_first;
 cov::heap<10240, cov::allocate_policy::worst_fit, true> cov_alloc_worst;
-std::allocator <cov::byte> std_alloc;
+std::allocator<cov::byte> std_alloc;
 
 cov::timer::timer_t time()
 {
