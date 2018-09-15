@@ -12,7 +12,7 @@ int main()
 	std::cout<<var.get<int>()<<std::endl;
 	var=3.14;
 	std::cout<<static_cast<double>(var)<<std::endl;
-	var=std::string("Hello");
+	var.force_emplace("Hello");
 	std::cout<<var.get<std::string>()<<std::endl;
 	return 0;
 }
