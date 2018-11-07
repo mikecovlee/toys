@@ -2,6 +2,20 @@
 #include <iostream>
 #include <utility>
 template <typename T>
+struct is_functinal final {
+	template <typename X>
+	static constexpr bool test(double)
+	{
+		return false;
+	}
+	template <typename X, typename = decltype(&X::operator())>
+	static constexpr bool test(int)
+	{
+		return true;
+	}
+	static constexpr bool value = test<T>(0);
+};
+template <typename T>
 class self_container;
 template <typename T>
 struct mem_fn_analyzer;
@@ -37,6 +51,7 @@ struct remove_self<rT(const self_container<rT(argsT...)> &, argsT...)> {
 };
 template <typename T>
 struct lambda_analyzer {
+	static_assert(is_functinal<T>::value, "Call make_lambda with non-functional type.");
 	using plain_type = typename remove_self<typename mem_fn_analyzer<decltype(&T::operator())>::plain_type>::result;
 };
 template <typename T>
