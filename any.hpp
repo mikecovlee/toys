@@ -192,7 +192,7 @@ namespace std {
 		}
 
 		template<typename T>
-		any(T &&val):data(value<T>::allocator.alloc(std::forward<T>(val))) {}
+		any(const T &val):data(value<T>::allocator.alloc(std::forward<T>(val))) {}
 
 		~any()
 		{
@@ -255,7 +255,7 @@ namespace std {
 		}
 	};
 
-	template<typename T> extern cov::allocator<any::value<T>, any_allocator_blck_size> any::value<T>::allocator;
+	template<typename T> cov::allocator<any::value<T>, any_allocator_blck_size> any::value<T>::allocator;
 
 	void swap(any &a, any &b)
 	{

@@ -3,11 +3,12 @@
 
 int main()
 {
-	std::any *a = new std::any(std::make_any<int>(10));
-	++*std::any_cast<int>(a);
-	std::cout << *std::any_cast<long>(a) << std::endl;
-	*a = std::string("Hello");
-	std::cout << *std::any_cast<std::string>(a) << std::endl;
-	delete a;
+	std::any a = std::make_any<int>(10);
+	++std::any_cast<int>(a);
+	std::cout << std::any_cast<int>(a) << std::endl;
+	a = std::string("Hello");
+	std::cout << std::any_cast<std::string>(a) << std::endl;
+	std::any b = a;
+	std::cout << std::any_cast<std::string>(b) << std::endl;
 	return 0;
 }
