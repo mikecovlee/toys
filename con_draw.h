@@ -37,6 +37,11 @@ void draw_picture(int x, int y, char ch)
 	con_draw_buffer[y * pic_width + x].Attributes = con_draw_attri;
 	con_draw_buffer[y * pic_width + x].Char.AsciiChar = ch;
 }
+// 获取帧所在位置字符
+char getch_picture(int x, int y)
+{
+	return con_draw_buffer[y * pic_width + x].Char.AsciiChar;
+}
 // 渲染帧
 void render_picture(int framerate)
 {
@@ -47,7 +52,7 @@ void render_picture(int framerate)
 	GetConsoleScreenBufferInfo(con_draw_stdhandle, &con_draw_csbi);
 	WriteConsoleOutput(con_draw_stdhandle, con_draw_buffer, con_draw_pos, con_draw_dat, &con_draw_csbi.srWindow);
 	GetLocalTime(&con_draw_systime);
-	Sleep(1000/framerate-(con_draw_systime.wMilliseconds-con_draw_time));
+	Sleep(1000 / framerate - (con_draw_systime.wMilliseconds - con_draw_time));
 }
 // 文字颜色
 int fcolor_white = 15, fcolor_black = 0, fcolor_red = 12, fcolor_green = 10, fcolor_blue = 9, fcolor_pink = 13, fcolor_yellow = 14, fcolor_cyan = 11;
