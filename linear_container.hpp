@@ -168,7 +168,7 @@ namespace cov {
 
 		void push_back(const data_t &dat)
 		{
-			emplace_back(std::move(dat));
+			emplace_back(dat);
 		}
 
 		void pop_back()
