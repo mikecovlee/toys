@@ -214,7 +214,7 @@ namespace cov {
 			stor_impl(const stor_impl &) = delete;
 			// 自定义构造函数，构造存储的数据
 			stor_impl(const T &dat) : m_data(dat) {}
-			// 以下五个函数为实现基类的virtual函数
+			// 以下四个函数为实现基类的virtual函数
 			std::type_index type() const noexcept override
 			{
 				return typeid(T);
