@@ -30,3 +30,5 @@
 
 # IDEs & Editors
 /.vscode
+
+.DS_Store
