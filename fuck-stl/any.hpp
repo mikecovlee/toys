@@ -153,17 +153,17 @@ namespace cov {
 		}
 	};
 
-	class alignas(alignof(std::size_t)) any final {
+	class any final {
 	public:
 		using typeid_t = std::type_index;
 		using byte_t = unsigned char;
 		// 缓冲池大小，过大的值可能会适而其反
-		static constexpr std::size_t default_allocate_buffer_size = 64;
+		static constexpr std::size_t default_allocate_buffer_size = 16;
 		/*
-				* 分配器提供者，默认使用STL分配器，可根据需要替换为内存池
-				* 提示：本框架的Any使用了Small Data Optimize技术，可大幅减少堆的负担
-				* 更换内存池可能并不会提升太多性能
-				*/
+			* 分配器提供者，默认使用 STL 分配器，可根据需要替换为内存池
+			* 提示：本框架的 Any 使用了 Small Data Optimize 技术，可大幅减少堆的负担
+			* 更换内存池可能并不会提升太多性能
+			*/
 		template <typename T>
 		using default_allocator_provider = std::allocator<T>;
 		// 简化定义
@@ -172,17 +172,17 @@ namespace cov {
 
 	private:
 		/*
-				    数据存储基类
-				    使用多态实现类型擦除的关键，即抽象出类型无关的接口
-				    此类为接口类，或称之为纯虚基类
-				*/
+			    数据存储基类
+			    使用多态实现类型擦除的关键，即抽象出类型无关的接口
+			    此类为接口类，或称之为纯虚基类
+			*/
 		class stor_base {
 		public:
-			// 默认构造函数，直接使用default版本
+			// 默认构造函数，直接使用 default 版本
 			stor_base() = default;
-			// 复制构造函数，直接使用default版本
+			// 复制构造函数，直接使用 default 版本
 			stor_base(const stor_base &) = default;
-			// 析构函数，声明为虚函数并使用default实现
+			// 析构函数，声明为虚函数并使用 default 实现
 			virtual ~stor_base() = default;
 			// RTTI类型函数，返回类型信息
 			virtual std::type_index type() const noexcept = 0;
@@ -194,27 +194,26 @@ namespace cov {
 			virtual stor_base *clone() const = 0;
 		};
 		/*
-				    数据存储模版派生类
-				    存储数据的具体实现
-				    此类将利用模版类的特性自动生成所需要的派生类
-				*/
+			    数据存储模版派生类
+			    存储数据的具体实现
+			    此类将利用模版类的特性自动生成所需要的派生类
+			*/
 		template <typename T>
 		class stor_impl : public stor_base {
-			// 实际存储的数据
-			T m_data;
-
 		public:
+			// 实际存储的数据
+			T data;
 			// 分配器
 			static default_allocator<stor_impl<T>> allocator;
-			// 默认构造函数，使用default实现
+			// 默认构造函数，使用 default 实现
 			stor_impl() = default;
-			// 析构函数，使用default实现
+			// 析构函数，使用 default 实现
 			virtual ~stor_impl() = default;
 			// 禁用复制构造函数
 			stor_impl(const stor_impl &) = delete;
 			// 自定义构造函数，构造存储的数据
-			stor_impl(const T &dat) : m_data(dat) {}
-			// 以下四个函数为实现基类的virtual函数
+			stor_impl(const T &dat) : data(dat) {}
+			// 以下四个函数为实现基类的 virtual 函数
 			std::type_index type() const noexcept override
 			{
 				return typeid(T);
@@ -228,26 +227,17 @@ namespace cov {
 			}
 			void clone(byte_t *ptr) const override
 			{
-				::new (ptr) stor_impl<T>(m_data);
+				::new (ptr) stor_impl<T>(data);
 			}
 			stor_base *clone() const override
 			{
-				return allocator.alloc(m_data);
-			}
-			// 访问数据
-			inline T &get_data()
-			{
-				return m_data;
-			}
-			inline const T &get_data() const
-			{
-				return m_data;
+				return allocator.alloc(data);
 			}
 		};
 		/*
-				    实现小对象优化
-				    减少内存分配瓶颈
-				*/
+			    实现小对象优化
+			    减少内存分配瓶颈
+			*/
 
 		// 存储状态，分别为无数据、未触发优化、已触发优化
 		enum class stor_status {
@@ -258,7 +248,7 @@ namespace cov {
 
 		// 使用联合实现
 		struct stor_union {
-			// 触发小对象优化的阈值，需大于std::alignment_of<stor_base *>::value
+			// 触发小对象优化的阈值，需大于 std::alignment_of<stor_base *>::value
 			static constexpr unsigned int static_stor_size = 3 * std::alignment_of<stor_base *>::value;
 			union {
 				// 使用无符号字符数组提供存储数据的原始内存空间
@@ -274,12 +264,12 @@ namespace cov {
 
 		// 内部方法封装
 
-		// 获取stor_base指针方法的封装
+		// 获取 stor_base 指针方法的封装
 		inline stor_base *get_handler()
 		{
 			switch (m_data.status) {
 			case stor_status::null:
-				return nullptr;
+				throw_ex<runtime_error>("Access null any object.");
 			case stor_status::data:
 				return reinterpret_cast<stor_base *>(m_data.impl.data);
 			case stor_status::ptr:
@@ -292,7 +282,7 @@ namespace cov {
 		{
 			switch (m_data.status) {
 			case stor_status::null:
-				return nullptr;
+				throw_ex<runtime_error>("Access null any object.");
 			case stor_status::data:
 				return reinterpret_cast<const stor_base *>(m_data.impl.data);
 			case stor_status::ptr:
@@ -311,9 +301,9 @@ namespace cov {
 
 		// 存储方法的封装
 		template <typename T>
-		void store(const T &val)
+		inline void store(const T &val)
 		{
-			if (sizeof(T) <= stor_union::static_stor_size) {
+			if (sizeof(stor_impl<T>) <= stor_union::static_stor_size) {
 				::new (m_data.impl.data) stor_impl<T>(val);
 				m_data.status = stor_status::data;
 				COVSDK_LOGEV("Any SDO Enabled.")
@@ -326,7 +316,7 @@ namespace cov {
 		}
 
 		// 复制方法的封装
-		void copy(const any &data)
+		inline void copy(const any &data)
 		{
 			if (data.m_data.status != stor_status::null) {
 				const stor_base *ptr = data.get_handler();
@@ -359,7 +349,7 @@ namespace cov {
 		// 默认构造函数
 		any() {}
 
-		// 自定义构造函数，未标记为explicit以允许隐式转换
+		// 自定义构造函数，未标记为 explicit 以允许隐式转换
 		template <typename T>
 		any(const T &val)
 		{
@@ -386,7 +376,7 @@ namespace cov {
 
 		// 赋值函数，实际上为重载赋值运算符
 		template <typename T>
-		any &operator=(const T &val)
+		inline any &operator=(const T &val)
 		{
 			recycle();
 			store(val);
@@ -394,7 +384,7 @@ namespace cov {
 		}
 
 		// 自赋值重载
-		any &operator=(const any &val)
+		inline any &operator=(const any &val)
 		{
 			if (&val != this)
 				copy(val);
@@ -402,14 +392,14 @@ namespace cov {
 		}
 
 		// 右值引用重载
-		any &operator=(any &&val) noexcept
+		inline any &operator=(any &&val) noexcept
 		{
 			swap(val);
 			return *this;
 		}
 
 		// 获取存储数据的类型，若为空则返回void
-		std::type_index data_type() const noexcept
+		inline std::type_index data_type() const noexcept
 		{
 			if (m_data.status == stor_status::null)
 				return typeid(void);
@@ -419,24 +409,22 @@ namespace cov {
 
 		// 提取数据方法封装
 		template <typename T>
-		T &get()
+		inline T &get()
 		{
-			if (m_data.status == stor_status::null)
-				throw_ex<runtime_error>("Access null any object.");
-			if (get_handler()->type() != typeid(T))
+			stor_base *ptr = get_handler();
+			if (ptr->type() != typeid(T))
 				throw_ex<runtime_error>("Access wrong type of any.");
-			return static_cast<stor_impl<T> *>(get_handler())->get_data();
+			return static_cast<stor_impl<T> *>(ptr)->data;
 		}
 
 		// 常量重载
 		template <typename T>
-		const T &get() const
+		inline const T &get() const
 		{
-			if (m_data.status == stor_status::null)
-				throw_ex<runtime_error>("Access null any object.");
-			if (get_handler()->type() != typeid(T))
+			const stor_base *ptr = get_handler();
+			if (ptr->type() != typeid(T))
 				throw_ex<runtime_error>("Access wrong type of any.");
-			return static_cast<const stor_impl<T> *>(get_handler())->get_data();
+			return static_cast<const stor_impl<T> *>(ptr)->data;
 		}
 	};
 

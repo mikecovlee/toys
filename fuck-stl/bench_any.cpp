@@ -67,34 +67,66 @@ timer::m_timer(std::chrono::high_resolution_clock::now());
 
 int test_epoch = 10000000;
 
+struct test_large_data {
+	std::string str;
+	unsigned char alignment[32];
+	test_large_data(const char *s) : str(s) {}
+};
+
 int main()
 {
 	std::cout << "Size of std::any: " << sizeof(std::any) << std::endl;
 	std::cout << "Size of cov::any: " << sizeof(cov::any) << std::endl;
 
-	std::cout << "std::any copying: " << timer::measure([]() {
-		std::any a(std::string("Hello"));
+	std::cout << "[Small Data] std::any copying: " << timer::measure([]() {
+		std::any a(10);
 		for (int i = 0; i < test_epoch; ++i)
 			std::any b(a);
 	}) << std::endl;
-	std::cout << "cov::any copying: " << timer::measure([]() {
-		cov::any a(std::string("Hello"));
+	std::cout << "[Small Data] cov::any copying: " << timer::measure([]() {
+		cov::any a(10);
 		for (int i = 0; i < test_epoch; ++i)
 			cov::any b(a);
 	}) << std::endl;
 
-	std::cout << "std::any instancing: " << timer::measure([]() {
-		std::any a(std::string("Hello"));
+	std::cout << "[Small Data] std::any instancing: " << timer::measure([]() {
+		std::any a(10);
 		for (int i = 0; i < test_epoch; ++i) {
-			std::any_cast<std::string &>(a).push_back('c');
-			std::any_cast<std::string &>(a).pop_back();
+			++std::any_cast<int &>(a);
+			--std::any_cast<int &>(a);
 		}
 	}) << std::endl;
-	std::cout << "cov::any instancing: " << timer::measure([]() {
-		cov::any b(std::string("Hello"));
+	std::cout << "[Small Data] cov::any instancing: " << timer::measure([]() {
+		cov::any b(10);
 		for (int i = 0; i < test_epoch; ++i) {
-			b.get<std::string>().push_back('c');
-			b.get<std::string>().pop_back();
+			++b.get<int>();
+			--b.get<int>();
+		}
+	}) << std::endl;
+
+	std::cout << "[Large Data] std::any copying: " << timer::measure([]() {
+		std::any a(test_large_data("Hello"));
+		for (int i = 0; i < test_epoch; ++i)
+			std::any b(a);
+	}) << std::endl;
+	std::cout << "[Large Data] cov::any copying: " << timer::measure([]() {
+		cov::any a(test_large_data("Hello"));
+		for (int i = 0; i < test_epoch; ++i)
+			cov::any b(a);
+	}) << std::endl;
+
+	std::cout << "[Large Data] std::any instancing: " << timer::measure([]() {
+		std::any a(test_large_data("Hello"));
+		for (int i = 0; i < test_epoch; ++i) {
+			std::any_cast<test_large_data &>(a).str.push_back('c');
+			std::any_cast<test_large_data &>(a).str.pop_back();
+		}
+	}) << std::endl;
+	std::cout << "[Large Data] cov::any instancing: " << timer::measure([]() {
+		cov::any b(test_large_data("Hello"));
+		for (int i = 0; i < test_epoch; ++i) {
+			b.get<test_large_data>().str.push_back('c');
+			b.get<test_large_data>().str.pop_back();
 		}
 	}) << std::endl;
 
