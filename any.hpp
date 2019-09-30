@@ -192,7 +192,7 @@ namespace std {
 		}
 
 		template<typename T>
-		any(const T &val):data(value<T>::allocator.alloc(std::forward<T>(val))) {}
+		any(const T &val):data(value<T>::allocator.alloc(val)) {}
 
 		~any()
 		{
