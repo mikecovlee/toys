@@ -529,6 +529,24 @@ std::unordered_map<char, std::string> huffman_encoder::operator()()
     return std::move(dict);
 }
 #include <fstream>
+char str2bin(std::string str)
+{
+    if (str.size() != 8)
+        throw std::runtime_error("Wrong literal.");
+    char bin = 0x00;
+    for (int i = 0; i < 8; ++i)
+        if (str[i] == '1')
+            bin |= 0x80 >> i;
+    return bin;
+}
+std::string bin2str(char bin)
+{
+    std::string str(8, '0');
+    for (int i = 0; i < 8; ++i)
+        if (bin >> i & 0x01)
+            str[7 - i] = '1';
+    return std::move(str);
+}
 int main(int argc, char** argv)
 {
     if (argc != 4)
@@ -544,21 +562,44 @@ int main(int argc, char** argv)
     }
     ifs.close();
     auto encode_dict = huffman_encoder(buff)();
-    std::ofstream ofs(argv[2]);
-    for (char ch:buff)
-        ofs << encode_dict[ch];
-    ofs.close();
+    int align = 0;
+    {
+        std::vector<char> encode_buff;
+        for (char ch:buff)
+        {
+            std::string code(encode_dict[ch]);
+            for (char c:code)
+                encode_buff.push_back(c);
+        }
+        align = encode_buff.size() % 8;
+        for (int i = 0; i < align; ++i)
+            encode_buff.push_back('0');
+        std::swap(buff, encode_buff);
+    }
+    std::vector<char> tmp;
+    for (std::size_t i = 0; i < buff.size(); i += 8)
+    {
+        char bin = 0x00;
+        for (int idx = 0; idx < 8; ++idx)
+            if (buff[i + idx] == '1')
+                bin |= 0x80 >> idx;
+        tmp.push_back(bin);
+    }
     std::unordered_map<std::string, char> decode_dict;
     for (auto &it:encode_dict)
         decode_dict.emplace(it.second, it.first);
-    ifs.open(argv[2]);
-    ofs.open(argv[3]);
-    std::string key;
-    for(char ch;;)
+    buff.clear();
+    for(char ch:tmp)
     {
-        ch = ifs.get();
-        if (!ifs)
-            break;
+        for (int i = 7; i >= 0; --i)
+            buff.push_back(ch >> i & 0x01 ? '1' : '0');
+    }
+    for (; align > 0; --align)
+        buff.pop_back();
+    std::ofstream ofs(argv[3]);
+    std::string key;
+    for (char ch:buff)
+    {
         key.push_back(ch);
         if (decode_dict.count(key) > 0)
         {
