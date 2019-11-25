@@ -1,3 +1,4 @@
+#pragma once
 #include <unordered_map>
 #include <stdexcept>
 #include <algorithm>
@@ -603,6 +604,8 @@ public:
 	{
 		std::vector<char> buff;
 		std::ifstream ifs(in, std::ios_base::binary);
+        if (!ifs)
+            throw std::runtime_error("File not exist.");
 		for (char ch;;) {
 			ch = ifs.get();
 			if (!ifs)
@@ -643,6 +646,8 @@ public:
 	static void decompress(const std::string &in, const std::string &out)
 	{
 		std::ifstream ifs(in, std::ios_base::binary);
+        if (!ifs)
+            throw std::runtime_error("File not exist.");
 		std::size_t count = read_data<std::uint32_t>(ifs);
 		std::vector<std::pair<char, std::size_t>> index;
 		for (std::size_t i = 0; i < count; ++i) {
@@ -701,12 +706,3 @@ public:
 		}
 	}
 };
-
-int main(int argc, char **argv)
-{
-	if (argc != 4)
-		return -1;
-	huffman_compress::compress(argv[1], argv[2]);
-	huffman_compress::decompress(argv[2], argv[3]);
-	return 0;
-}
