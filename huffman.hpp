@@ -601,7 +601,7 @@ private:
 public:
 	/**
 		 * File Structure
-		 * Header: Dictionary Index Count(uint8_t)
+		 * Header: Dictionary Index Count(uint16_t)
 		 * Dictionary Header: Character(int8_t), BytesofData(uint16_t)
 		 * Dictionary Data:   Size(uint32_t), Align(uint8_t), Data
 		 * File Data:         Size(uint64_t), Align(uint8_t), Data
@@ -635,7 +635,7 @@ public:
 		int align = align_data(buff);
 		std::ofstream ofs(out, std::ios_base::binary);
 		LOG("Writing file header...");
-		write_data<std::uint8_t>(ofs, encode.size());
+		write_data<std::uint16_t>(ofs, encode.size());
 		for (auto &it : encode) {
 			write_data<std::int8_t>(ofs, it.first);
 			write_data<std::uint16_t>(ofs, it.second.size());
@@ -661,7 +661,7 @@ public:
         if (!ifs)
             throw std::runtime_error("File not exist.");
 		LOG("Reading file header...");
-		std::size_t count = read_data<std::uint8_t>(ifs);
+		std::size_t count = read_data<std::uint16_t>(ifs);
 		std::vector<std::pair<char, std::size_t>> index;
 		for (std::size_t i = 0; i < count; ++i) {
 			char ch = read_data<std::int8_t>(ifs);
