@@ -1,4 +1,5 @@
 #pragma once
+
 #include <unordered_map>
 #include <stdexcept>
 #include <algorithm>
@@ -7,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <list>
+
 #ifdef __DEBUG__
 #include <cstdio>
 #define LOG(msg) ::printf("%s\n", msg)
@@ -15,13 +17,14 @@
 #define LOG(msg)
 #define ADV_LOG(...)
 #endif
+
 class huffman_compress final {
 public:
 	huffman_compress() = delete;
 
 private:
 	// Binary Tree
-	template <typename T>
+	template<typename T>
 	class tree_type final {
 		struct tree_node final {
 			tree_node *root = nullptr;
@@ -37,9 +40,10 @@ private:
 
 			tree_node(tree_node *a, tree_node *b, tree_node *c, const T &dat) : root(a), left(b), right(c), data(dat) {}
 
-			template <typename... Args_T>
+			template<typename... Args_T>
 			tree_node(tree_node *a, tree_node *b, tree_node *c, Args_T &&... args) : root(a), left(b), right(c),
-				data(std::forward<Args_T>(args)...) {}
+				data(std::forward<Args_T>(
+				         args)...) {}
 
 			~tree_node() = default;
 		};
@@ -279,7 +283,7 @@ private:
 			return node;
 		}
 
-		template <typename... Args>
+		template<typename... Args>
 		iterator emplace_root_left(iterator it, Args &&... args)
 		{
 			if (it.mData == mRoot) {
@@ -297,7 +301,7 @@ private:
 			return node;
 		}
 
-		template <typename... Args>
+		template<typename... Args>
 		iterator emplace_root_right(iterator it, Args &&... args)
 		{
 			if (it.mData == mRoot) {
@@ -315,7 +319,7 @@ private:
 			return node;
 		}
 
-		template <typename... Args>
+		template<typename... Args>
 		iterator emplace_left_left(iterator it, Args &&... args)
 		{
 			if (!it.usable())
@@ -327,7 +331,7 @@ private:
 			return node;
 		}
 
-		template <typename... Args>
+		template<typename... Args>
 		iterator emplace_left_right(iterator it, Args &&... args)
 		{
 			if (!it.usable())
@@ -339,7 +343,7 @@ private:
 			return node;
 		}
 
-		template <typename... Args>
+		template<typename... Args>
 		iterator emplace_right_left(iterator it, Args &&... args)
 		{
 			if (!it.usable())
@@ -351,7 +355,7 @@ private:
 			return node;
 		}
 
-		template <typename... Args>
+		template<typename... Args>
 		iterator emplace_right_right(iterator it, Args &&... args)
 		{
 			if (!it.usable())
@@ -481,15 +485,19 @@ private:
 			return subroot;
 		}
 	};
+
 	// Huffman Dictionary
 	class encode_dict final {
 		struct node_t {
 			char ch = '\0';
 			std::size_t freq = 0;
+
 			node_t(char c, std::size_t f) : ch(c), freq(f) {}
 		};
+
 		std::unordered_map<char, std::string> dict;
 		tree_type<node_t> tree;
+
 		void gen_path(tree_type<node_t>::iterator it, std::string path)
 		{
 			if (!it.left().usable() && !it.right().usable()) {
@@ -502,7 +510,9 @@ private:
 
 	public:
 		encode_dict() = delete;
+
 		encode_dict(const encode_dict &) = delete;
+
 		encode_dict(const std::vector<char> &buff)
 		{
 			std::unordered_map<char, std::size_t> freq;
@@ -512,7 +522,7 @@ private:
 				else
 					++freq[ch];
 			}
-			std::list<tree_type<node_t>> list;
+			std::list <tree_type<node_t>> list;
 			for (auto &it : freq) {
 				list.emplace_back();
 				list.back().emplace_root_left(list.back().root(), it.first, it.second);
@@ -531,12 +541,14 @@ private:
 			}
 			tree = std::move(list.front());
 		}
+
 		std::unordered_map<char, std::string> operator()()
 		{
 			gen_path(tree.root(), "");
 			return std::move(dict);
 		}
 	};
+
 	// Internal Functions
 	static std::unordered_map<std::string, char> decode_dict(const std::unordered_map<char, std::string> &encode)
 	{
@@ -545,6 +557,7 @@ private:
 			decode.emplace(it.second, it.first);
 		return std::move(decode);
 	}
+
 	static char str2bin(std::string str)
 	{
 		if (str.size() != 8)
@@ -555,6 +568,7 @@ private:
 				bin |= 0x80 >> i;
 		return bin;
 	}
+
 	static std::string bin2str(char bin)
 	{
 		std::string str(8, '0');
@@ -563,13 +577,15 @@ private:
 				str[7 - i] = '1';
 		return std::move(str);
 	}
-	template <typename T>
+
+	template<typename T>
 	static void write_data(std::ostream &o, T dat)
 	{
 		char *ptr = reinterpret_cast<char *>(&dat);
 		for (std::size_t i = 0; i < sizeof(T); ++i)
 			o.put(*(ptr + i));
 	}
+
 	static void write_data(std::ostream &o, const std::vector<char> &buff)
 	{
 		for (std::size_t i = 0; i < buff.size(); i += 8) {
@@ -580,7 +596,8 @@ private:
 			o.put(bin);
 		}
 	}
-	template <typename T>
+
+	template<typename T>
 	static T read_data(std::istream &is)
 	{
 		char buff[sizeof(T)];
@@ -589,6 +606,7 @@ private:
 		T dat(*reinterpret_cast<T *>(buff));
 		return std::move(dat);
 	}
+
 	static int align_data(std::vector<char> &buff)
 	{
 		int align_size = buff.size() % 8;
@@ -602,12 +620,12 @@ private:
 
 public:
 	/**
-		 * File Structure
-		 * Header: Dictionary Index Count(uint8_t), Checksum(uint16_t)
-		 * Dictionary Header: Character(int8_t), BytesofData(uint8_t)
-		 * Dictionary Data:   Size(uint16_t), Align(uint8_t), Data
-		 * File Data:         Size(uint64_t), Align(uint8_t), Data
-		*/
+	     * File Structure
+	     * Header: Index Count(uint8_t), Checksum(uint16_t)
+	     * Dictionary Header: Character(int8_t), BytesofData(uint8_t)
+	     * Dictionary Data:   Size(uint16_t), Align(uint8_t), Data
+	     * File Data:         Size(uint64_t), Align(uint8_t), Data
+	    */
 	struct file_info {
 		std::uint8_t index_count;
 		std::uint16_t checksum;
@@ -616,6 +634,7 @@ public:
 		std::uint16_t file_dat_size;
 		std::uint8_t file_dat_align;
 	};
+
 	static file_info read_info(const std::string &in)
 	{
 		file_info info;
@@ -638,6 +657,7 @@ public:
 		info.file_dat_align = read_data<std::uint8_t>(ifs);
 		return std::move(info);
 	}
+
 	static void compress(const std::string &in, const std::string &out)
 	{
 		std::vector<char> buff;
@@ -697,6 +717,7 @@ public:
 		write_data<std::uint8_t>(ofs, align);
 		write_data(ofs, buff);
 	}
+
 	static void decompress(const std::string &in, const std::string &out)
 	{
 		std::ifstream ifs(in, std::ios_base::binary);
@@ -708,7 +729,7 @@ public:
 		unsigned int checksum = read_data<std::uint16_t>(ifs);
 		ADV_LOG("Checksum: %u\n", checksum);
 		unsigned int expected_checksum = 0;
-		std::vector<std::pair<char, std::size_t>> index;
+		std::vector <std::pair<char, std::size_t>> index;
 		for (std::size_t i = 0; i < count; ++i) {
 			char ch = read_data<std::int8_t>(ifs);
 			std::size_t size = read_data<std::uint8_t>(ifs);
