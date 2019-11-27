@@ -9,9 +9,11 @@
 #include <list>
 #ifdef __DEBUG__
 #include <cstdio>
-#define LOG(msg) ::printf("%s: %s\n", __TIME__, msg)
+#define LOG(msg) ::printf("%s\n", msg)
+#define ADV_LOG(...) ::printf(__VA_ARGS__)
 #else
 #define LOG(msg)
+#define ADV_LOG(...)
 #endif
 class huffman_compress final {
 public:
@@ -601,11 +603,42 @@ private:
 public:
 	/**
 		 * File Structure
-		 * Header: Dictionary Index Count(uint16_t)
-		 * Dictionary Header: Character(int8_t), BytesofData(uint16_t)
-		 * Dictionary Data:   Size(uint32_t), Align(uint8_t), Data
+		 * Header: Dictionary Index Count(uint8_t), Checksum(uint8_t)
+		 * Dictionary Header: Character(int8_t), BytesofData(uint8_t)
+		 * Dictionary Data:   Size(uint16_t), Align(uint8_t), Data
 		 * File Data:         Size(uint64_t), Align(uint8_t), Data
 		*/
+	struct file_info
+	{
+		std::uint8_t index_count;
+		std::uint8_t checksum;
+		std::uint16_t dict_dat_size;
+		std::uint8_t dict_dat_align;
+		std::uint16_t file_dat_size;
+		std::uint8_t file_dat_align;
+	};
+	static file_info read_info(const std::string &in)
+	{
+		file_info info;
+		std::ifstream ifs(in, std::ios_base::binary);
+        if (!ifs)
+            throw std::runtime_error("File not exist.");
+		info.index_count = read_data<std::uint8_t>(ifs) + 1;
+		info.checksum = read_data<std::uint16_t>(ifs);
+		unsigned int expected_checksum = 0;
+		for (std::size_t i = 0; i < info.index_count; ++i) {
+			read_data<std::int8_t>(ifs);
+			expected_checksum += read_data<std::uint8_t>(ifs);
+		}
+		if (info.checksum != expected_checksum)
+			throw std::runtime_error("Wrong file format.");
+		info.dict_dat_size = read_data<std::uint16_t>(ifs);
+		info.dict_dat_align = read_data<std::uint8_t>(ifs);
+		for (std::size_t i = 0; i < info.dict_dat_size; ++i, ifs.get());
+		info.file_dat_size = read_data<std::uint64_t>(ifs);
+		info.file_dat_align = read_data<std::uint8_t>(ifs);
+		return std::move(info);
+	}
 	static void compress(const std::string &in, const std::string &out)
 	{
 		std::vector<char> buff;
@@ -635,10 +668,16 @@ public:
 		int align = align_data(buff);
 		std::ofstream ofs(out, std::ios_base::binary);
 		LOG("Writing file header...");
-		write_data<std::uint16_t>(ofs, encode.size());
+		ADV_LOG("Index Count: %lu\n", encode.size());
+		write_data<std::uint8_t>(ofs, encode.size() - 1);
+		unsigned int checksum = 0;
+		for (auto &it : encode)
+			checksum += it.second.size();
+		write_data<std::uint16_t>(ofs, checksum);
+		ADV_LOG("Checksum: %u\n", checksum);
 		for (auto &it : encode) {
 			write_data<std::int8_t>(ofs, it.first);
-			write_data<std::uint16_t>(ofs, it.second.size());
+			write_data<std::uint8_t>(ofs, it.second.size());
 		}
 		LOG("Writing dictionary data...");
 		std::vector<char> dict_buff;
@@ -647,11 +686,15 @@ public:
 				dict_buff.push_back(ch);
 		}
 		int dict_align = align_data(dict_buff);
-		write_data<std::uint32_t>(ofs, dict_buff.size() / 8);
+		ADV_LOG("DictData Size: %lu\n", dict_buff.size() / 8);
+		write_data<std::uint16_t>(ofs, dict_buff.size() / 8);
+		ADV_LOG("DictDat Align: %u\n", dict_align);
 		write_data<std::uint8_t>(ofs, dict_align);
 		write_data(ofs, dict_buff);
 		LOG("Writing File Data...");
+		ADV_LOG("FileData Size: %lu\n", buff.size() / 8);
 		write_data<std::uint64_t>(ofs, buff.size() / 8);
+		ADV_LOG("FileDat Align: %u\n", align);
 		write_data<std::uint8_t>(ofs, align);
 		write_data(ofs, buff);
 	}
@@ -661,18 +704,27 @@ public:
         if (!ifs)
             throw std::runtime_error("File not exist.");
 		LOG("Reading file header...");
-		std::size_t count = read_data<std::uint16_t>(ifs);
+		std::size_t count = read_data<std::uint8_t>(ifs) + 1;
+		ADV_LOG("Index Count: %lu\n", count);
+		unsigned int expected_checksum = read_data<std::uint16_t>(ifs);
+		ADV_LOG("Checksum: %u\n", expected_checksum);
+		unsigned int checksum = 0;
 		std::vector<std::pair<char, std::size_t>> index;
 		for (std::size_t i = 0; i < count; ++i) {
 			char ch = read_data<std::int8_t>(ifs);
-			std::size_t size = read_data<std::uint16_t>(ifs);
+			std::size_t size = read_data<std::uint8_t>(ifs);
+			checksum += size;
 			index.emplace_back(ch, size);
 		}
+		if (checksum != expected_checksum)
+			throw std::runtime_error("Wrong file format.");
 		std::vector<char> buff;
 		{
 			LOG("Reading dictionary data...");
-			std::size_t data_size = read_data<std::uint32_t>(ifs);
+			std::size_t data_size = read_data<std::uint16_t>(ifs);
+			ADV_LOG("DictData Size: %lu\n", data_size);
 			int align = read_data<std::uint8_t>(ifs);
+			ADV_LOG("DictDat Align: %u\n", align);
 			for (std::size_t i = 0; i < data_size; ++i)
 				buff.push_back(ifs.get());
 			std::vector<char> encode_buff;
@@ -700,7 +752,9 @@ public:
 		{
 			LOG("Reading file data...");
 			std::size_t data_size = read_data<std::uint64_t>(ifs);
+			ADV_LOG("FileData Size: %lu\n", data_size);
 			int align = read_data<std::uint8_t>(ifs);
+			ADV_LOG("FileDat Align: %u\n", align);
 			for (std::size_t i = 0; i < data_size; ++i)
 				buff.push_back(ifs.get());
 			std::vector<char> encode_buff;
