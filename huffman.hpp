@@ -631,7 +631,7 @@ public:
 		std::uint16_t checksum;
 		std::uint16_t dict_dat_size;
 		std::uint8_t dict_dat_align;
-		std::uint16_t file_dat_size;
+		std::uint64_t file_dat_size;
 		std::uint8_t file_dat_align;
 	};
 
