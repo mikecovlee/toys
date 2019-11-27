@@ -603,15 +603,14 @@ private:
 public:
 	/**
 		 * File Structure
-		 * Header: Dictionary Index Count(uint8_t), Checksum(uint8_t)
+		 * Header: Dictionary Index Count(uint8_t), Checksum(uint16_t)
 		 * Dictionary Header: Character(int8_t), BytesofData(uint8_t)
 		 * Dictionary Data:   Size(uint16_t), Align(uint8_t), Data
 		 * File Data:         Size(uint64_t), Align(uint8_t), Data
 		*/
-	struct file_info
-	{
+	struct file_info {
 		std::uint8_t index_count;
-		std::uint8_t checksum;
+		std::uint16_t checksum;
 		std::uint16_t dict_dat_size;
 		std::uint8_t dict_dat_align;
 		std::uint16_t file_dat_size;
@@ -621,12 +620,12 @@ public:
 	{
 		file_info info;
 		std::ifstream ifs(in, std::ios_base::binary);
-        if (!ifs)
-            throw std::runtime_error("File not exist.");
-		info.index_count = read_data<std::uint8_t>(ifs) + 1;
+		if (!ifs)
+			throw std::runtime_error("File not exist.");
+		info.index_count = read_data<std::uint8_t>(ifs);
 		info.checksum = read_data<std::uint16_t>(ifs);
 		unsigned int expected_checksum = 0;
-		for (std::size_t i = 0; i < info.index_count; ++i) {
+		for (std::size_t i = 0; i <= info.index_count; ++i) {
 			read_data<std::int8_t>(ifs);
 			expected_checksum += read_data<std::uint8_t>(ifs);
 		}
@@ -643,8 +642,8 @@ public:
 	{
 		std::vector<char> buff;
 		std::ifstream ifs(in, std::ios_base::binary);
-        if (!ifs)
-            throw std::runtime_error("File not exist.");
+		if (!ifs)
+			throw std::runtime_error("File not exist.");
 		LOG("Reading file context...");
 		for (char ch;;) {
 			ch = ifs.get();
@@ -701,19 +700,19 @@ public:
 	static void decompress(const std::string &in, const std::string &out)
 	{
 		std::ifstream ifs(in, std::ios_base::binary);
-        if (!ifs)
-            throw std::runtime_error("File not exist.");
+		if (!ifs)
+			throw std::runtime_error("File not exist.");
 		LOG("Reading file header...");
 		std::size_t count = read_data<std::uint8_t>(ifs) + 1;
 		ADV_LOG("Index Count: %lu\n", count);
-		unsigned int expected_checksum = read_data<std::uint16_t>(ifs);
-		ADV_LOG("Checksum: %u\n", expected_checksum);
-		unsigned int checksum = 0;
+		unsigned int checksum = read_data<std::uint16_t>(ifs);
+		ADV_LOG("Checksum: %u\n", checksum);
+		unsigned int expected_checksum = 0;
 		std::vector<std::pair<char, std::size_t>> index;
 		for (std::size_t i = 0; i < count; ++i) {
 			char ch = read_data<std::int8_t>(ifs);
 			std::size_t size = read_data<std::uint8_t>(ifs);
-			checksum += size;
+			expected_checksum += size;
 			index.emplace_back(ch, size);
 		}
 		if (checksum != expected_checksum)
