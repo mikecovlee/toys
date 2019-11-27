@@ -7,6 +7,12 @@
 #include <string>
 #include <vector>
 #include <list>
+#ifdef __DEBUG__
+#include <cstdio>
+#define LOG(msg) ::printf("%s: %s\n", __TIME__, msg)
+#else
+#define LOG(msg)
+#endif
 class huffman_compress final {
 public:
 	huffman_compress() = delete;
@@ -595,10 +601,10 @@ private:
 public:
 	/**
 		 * File Structure
-		 * Header: Dictionary Index Count(uint16_t)
-		 * Dictionary Header: Character(int8_t), SizeofData(uint16_t)
-		 * Dictionary Data:   Size(uint16_t), Align(uint8_t), Data
-		 * File Data:         Size(uint32_t), Align(uint8_t), Data
+		 * Header: Dictionary Index Count(uint8_t)
+		 * Dictionary Header: Character(int8_t), BytesofData(uint16_t)
+		 * Dictionary Data:   Size(uint32_t), Align(uint8_t), Data
+		 * File Data:         Size(uint64_t), Align(uint8_t), Data
 		*/
 	static void compress(const std::string &in, const std::string &out)
 	{
@@ -606,6 +612,7 @@ public:
 		std::ifstream ifs(in, std::ios_base::binary);
         if (!ifs)
             throw std::runtime_error("File not exist.");
+		LOG("Reading file context...");
 		for (char ch;;) {
 			ch = ifs.get();
 			if (!ifs)
@@ -613,8 +620,10 @@ public:
 			buff.push_back(ch);
 		}
 		ifs.close();
+		LOG("Generating dictionary...");
 		auto encode = encode_dict(buff)();
 		{
+			LOG("Encoding...");
 			std::vector<char> encode_buff;
 			for (char ch : buff) {
 				std::string code(encode[ch]);
@@ -625,21 +634,24 @@ public:
 		}
 		int align = align_data(buff);
 		std::ofstream ofs(out, std::ios_base::binary);
-		write_data<std::uint16_t>(ofs, encode.size());
+		LOG("Writing file header...");
+		write_data<std::uint8_t>(ofs, encode.size());
 		for (auto &it : encode) {
 			write_data<std::int8_t>(ofs, it.first);
 			write_data<std::uint16_t>(ofs, it.second.size());
 		}
+		LOG("Writing dictionary data...");
 		std::vector<char> dict_buff;
 		for (auto &it : encode) {
 			for (auto &ch : it.second)
 				dict_buff.push_back(ch);
 		}
 		int dict_align = align_data(dict_buff);
-		write_data<std::uint16_t>(ofs, dict_buff.size() / 8);
+		write_data<std::uint32_t>(ofs, dict_buff.size() / 8);
 		write_data<std::uint8_t>(ofs, dict_align);
 		write_data(ofs, dict_buff);
-		write_data<std::uint32_t>(ofs, buff.size() / 8);
+		LOG("Writing File Data...");
+		write_data<std::uint64_t>(ofs, buff.size() / 8);
 		write_data<std::uint8_t>(ofs, align);
 		write_data(ofs, buff);
 	}
@@ -648,7 +660,8 @@ public:
 		std::ifstream ifs(in, std::ios_base::binary);
         if (!ifs)
             throw std::runtime_error("File not exist.");
-		std::size_t count = read_data<std::uint16_t>(ifs);
+		LOG("Reading file header...");
+		std::size_t count = read_data<std::uint8_t>(ifs);
 		std::vector<std::pair<char, std::size_t>> index;
 		for (std::size_t i = 0; i < count; ++i) {
 			char ch = read_data<std::int8_t>(ifs);
@@ -657,7 +670,8 @@ public:
 		}
 		std::vector<char> buff;
 		{
-			int data_size = read_data<std::uint16_t>(ifs);
+			LOG("Reading dictionary data...");
+			std::size_t data_size = read_data<std::uint32_t>(ifs);
 			int align = read_data<std::uint8_t>(ifs);
 			for (std::size_t i = 0; i < data_size; ++i)
 				buff.push_back(ifs.get());
@@ -671,6 +685,7 @@ public:
 		}
 		std::unordered_map<std::string, char> decode;
 		{
+			LOG("Decoding dictionary data...");
 			std::unordered_map<char, std::string> encode;
 			std::size_t idx = 0;
 			for (auto &it : index) {
@@ -683,7 +698,8 @@ public:
 		}
 		buff.clear();
 		{
-			int data_size = read_data<std::uint32_t>(ifs);
+			LOG("Reading file data...");
+			std::size_t data_size = read_data<std::uint64_t>(ifs);
 			int align = read_data<std::uint8_t>(ifs);
 			for (std::size_t i = 0; i < data_size; ++i)
 				buff.push_back(ifs.get());
@@ -695,8 +711,10 @@ public:
 				encode_buff.pop_back();
 			std::swap(buff, encode_buff);
 		}
+		ifs.close();
 		std::ofstream ofs(out, std::ios_base::binary);
 		std::string key;
+		LOG("Decoding file data...");
 		for (char ch : buff) {
 			key.push_back(ch);
 			if (decode.count(key) > 0) {
