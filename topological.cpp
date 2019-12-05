@@ -75,7 +75,7 @@ public:
         {
             std::cout<< "第" << i+1 << "学期: ";
             int count = 0;
-            for (auto it = graph.begin(); it != graph.end() && count<semester_dat[i];)
+            for (auto it = graph.begin(); it != graph.end() && count < semester_dat[i];)
             {
                 if (it->dependencies.empty() && it->request_semester == i+1)
                 {
@@ -86,9 +86,9 @@ public:
                 } else
                     ++it;
             }
-            for (auto it = graph.begin(); it != graph.end() && count<semester_dat[i];)
+            for (auto it = graph.begin(); it != graph.end() && count < semester_dat[i];)
             {
-                if (it->dependencies.empty())
+                if (it->dependencies.empty() && it->request_semester == 0)
                 {
                     std::cout << it->name << "  ";
                     remove_depency(it->number);
