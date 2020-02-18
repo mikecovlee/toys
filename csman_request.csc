@@ -6,14 +6,13 @@ using network
 
 function http_request(method, host, page, data)
     var sock = new tcp.socket
-    sock.set_timeout(2000)
-    sock.connect(tcp.resolve(host, "http"))
+    runtime.wait_for(2000, []()->sock.connect(tcp.resolve(host, "http")), {})
     @begin
     var head=
         method + " " + page + " HTTP/1.1\r\n" +
         "Host: " + host + "\r\n" +
         "Connection: Close\r\n" +
-        "Content-Length: " + data.size() + "\r\n" +
+        "Content-Length: " + data.size + "\r\n" +
         "Accept: */*\r\n" +
         "Pragma: no-cache\r\n" +
         "Cache-Control: no-cache\r\n" +
@@ -23,7 +22,7 @@ function http_request(method, host, page, data)
     var response = new string
     try
         loop
-            response += sock.receive(256)
+            response += sock.receive(32)
         end
     catch e
         sock.close()
@@ -82,24 +81,24 @@ var Record = json.to_var(json.from_string(http_response(http_request("GET", sour
 if query_platform("Generic")
     var Generic = json.to_var(json.from_string(http_response(http_request("GET", source_name, base_url + "Generic.json", ""))))
     foreach it in Generic
-        if !Record.exist(it.first())
-            Record.insert(it.first(), new hash_map)
+        if !Record.exist(it.first)
+            Record.insert(it.first, new hash_map)
         end
-        var map = Record[it.first()]
-        foreach rec in it.second()
-            if map.exist(rec.first())
+        var map = Record[it.first]
+        foreach rec in it.second
+            if map.exist(rec.first)
                 throw runtime.exception("Package collision.")
             end
-            map.insert(rec.first(), rec.second())
+            map.insert(rec.first, rec.second)
         end
-        swap(map, Record[it.first()])
+        swap(map, Record[it.first])
     end
 end
 
 foreach it in Record
-    system.out.println(it.first() + ":")
-    foreach rec in it.second()
-        system.out.print("\t" + rec.first())
-        system.out.println(":\t" + rec.second().Description)
+    system.out.println(it.first + ":")
+    foreach rec in it.second
+        system.out.print("\t" + rec.first)
+        system.out.println(":\t" + rec.second.Description)
     end
 end
