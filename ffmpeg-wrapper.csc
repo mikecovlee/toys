@@ -2,8 +2,7 @@
 
 import imgui_gl2     as gui
 import imgui_font    as font
-import async.future  as future
-import async.process as process
+import process
 import regex
 
 system.file.remove("." + system.path.separator + "imgui.ini")
@@ -27,10 +26,6 @@ add_option("quality", "-b:v")
 add_option("framerate", "-r")
 add_option("codec", "-c:v")
 
-var builder = new process.builder
-builder.redirect_stdin(false)
-builder.redirect_stdout(true)
-
 var current_dir = runtime.get_current_dir()
 var ffmpeg_bin = current_dir + system.path.separator + "bin" + system.path.separator + "ffmpeg.exe"
 
@@ -39,7 +34,7 @@ var filters = {".*\\.avi", ".*\\.flv", ".*\\.mp4"}
 var path_name = null
 
 function read_path()
-    if path[path.size()-1] != system.path.separator
+    if path[path.size - 1] != system.path.separator
         path += system.path.separator
     end
     var path_info = new array
@@ -51,11 +46,11 @@ function read_path()
         regs.push_back(regex.build(it))
     end
     foreach it in info
-        if it.type()==system.path.type.dir
+        if it.type == system.path.type.dir
             path_info.push_back(it)
         else
             foreach reg in regs
-                if !reg.match(it.name()).empty()
+                if !reg.match(it.name).empty()
                     files.push_back(it)
                 end
             end
@@ -65,8 +60,8 @@ function read_path()
         path_info.push_back(it)
     end
     foreach it in path_info
-        if it.type() != system.path.type.dir
-            path_name.push_back(it.name())
+        if it.type != system.path.type.dir
+            path_name.push_back(it.name)
         end
     end
 end
@@ -140,7 +135,7 @@ end
 
 function stop_compression()
     if ffmpeg_process != null && !ffmpeg_process.has_exited()
-        ffmpeg_process.kill()
+        ffmpeg_process.kill(false)
         ffmpeg_process.wait()
         ffmpeg_process = null
     end
@@ -207,12 +202,14 @@ loop
         else
             if ffmpeg_process == null || ffmpeg_process.has_exited()
                 ++file_index
-                if file_index < path_name.size()
-                    var opt = "-i " + path_name[file_index] + " "
+                if file_index < path_name.size
+                    var opt = {"-hide_banner", "-loglevel", "panic", "-y", "-i", path_name[file_index]}
                     foreach it in options
-                        opt += it.second().actual_name + " " + it.second().value + " -y "
+                        opt.push_back(it.second.actual_name)
+                        opt.push_back(it.second.value)
                     end
-                    ffmpeg_process = builder.start(ffmpeg_bin, opt + "." + system.path.separator + "output" + system.path.separator + get_filename(clone(path_name[file_index])) + output_suffix)    
+                    opt.push_back("." + system.path.separator + "output" + system.path.separator + get_filename(clone(path_name[file_index])) + output_suffix)
+                    ffmpeg_process = process.exec(ffmpeg_bin, opt)    
                 else
                     ffmpeg_process = null
                     gui.open_popup("提示##1")
@@ -220,7 +217,7 @@ loop
                     state = 0
                 end
             end
-            gui.progress_bar(file_index / path_name.size(), "正在转码...请稍候")
+            gui.progress_bar(file_index / path_name.size, "正在转码...请稍候")
             if gui.button("停止转码")
                 stop_compression()
                 state = 0
