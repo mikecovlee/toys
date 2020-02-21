@@ -6,7 +6,7 @@ using network
 
 function http_request(method, host, page, data)
     var sock = new tcp.socket
-    runtime.wait_for(2000, []()->sock.connect(tcp.resolve(host, "http")), {})
+    runtime.wait_for(10000, []()->sock.connect(tcp.resolve(host, "http")), {})
     @begin
     var head=
         method + " " + page + " HTTP/1.1\r\n" +
